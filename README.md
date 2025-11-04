@@ -176,103 +176,99 @@ app.listen(port, () => {
 });
 ```
 
-### Passo 4: Criação de função que busca outra opção de porta caso a selecionada não esteja disponível
+### Passo 4: Incluir Typescript e Jest no projeto 
 
-1. **Instale a biblioteca prompt:**
-
+1. **Digite o seguinte comando no prompt de comando**
 ```bash
-    npm install prompt
+yarn add -D typescript @types/node
+npx tsc --init
+```
+Apos isso deve aparecer no seu projeto um arquivo chamado **tsconfig.json**
+
+2. **Edite o conteúdo da arquivo para ficar como o exemplo abaixo:**
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    "strict": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "incremental": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+3. **Crie o arquivo nodemon.json e coloque o seguinte conteudo nele**:
+```json
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["node_modules", "dist"],
+  "exec": "node -r ts-node/register -r tsconfig-paths/register src/server.ts",
+  "env": {
+    "NODE_ENV": "development",
+    "PORT": "3000"
+  },
+  "delay": "200"
+}
 ```
 
-2. **Altere o arquivo chamado `server.js`** e adicione o seguinte código:
+4. **Execute o seguinte comando para instalar as bibliotecas de desenvolvimento necessárias:**
+```bash
+yarn add -D @types/dotenv @types/express @types/jest @types/jsonwebtoken @types/supertest @types/swagger-jsdoc @types/swagger-ui-express @types/yamljs copyfiles jest nodemon rimraf supertest ts-jest ts-node tsc-alias tsconfig-paths
+```
 
-```javascript
-const express = require('express');
-const cors = require('./middlewares/cors');
-const contentType = require('./middlewares/content-type');
-const bodyParser = require('./middlewares/body-parser');
-
-const app = express();
-const initialPort = 3000;
-
-app.use(cors);
-app.use(contentType);
-app.use(bodyParser);
-
-let users = [];
-
-// Endpoint para criação de usuário
-app.post('/users', (req, res) => {
-  const user = req.body;
-  users.push(user);
-  res.status(201).send('Usuário criado com sucesso!');
-});
-
-// Endpoint para listagem de usuários
-app.get('/users', (req, res) => {
-  res.json(users);
-});
-
-// Endpoint para atualização de usuário
-app.put('/users/:id', (req, res) => {
-  const id = req.params.id;
-  const updatedUser = req.body;
-  users = users.map((user) => (user.id === id ? updatedUser : user));
-  res.send('Usuário atualizado com sucesso!');
-});
-
-// Endpoint para deletar usuário
-app.delete('/users/:id', (req, res) => {
-  const id = req.params.id;
-  users = users.filter((user) => user.id !== id);
-  res.send('Usuário deletado com sucesso!');
-});
-
-// Função para iniciar o servidor em uma porta específica
-const startServer = (port) => {
-  app
-    .listen(port, () => {
-      console.log(`Servidor rodando na porta ${port}`);
-    })
-    .on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.log(`Porta ${port} está ocupada.`);
-        const newPort = port + 1;
-        promptUserForNewPort(newPort);
-      } else {
-        console.error(err);
-      }
-    });
-};
-
-// Função para perguntar ao usuário se deseja usar a nova porta
-const promptUserForNewPort = (newPort) => {
-  prompt.start();
-  const schema = {
-    properties: {
-      useNewPort: {
-        description: `Porta ${newPort} está disponível. Deseja usar essa porta? (sim/não)`,
-        pattern: /^(sim|não|s|n)$/i,
-        message: 'Responda com "sim" ou "não"',
-        required: true,
-      },
-    },
-  };
-
-  prompt.get(schema, (err, result) => {
-    if (
-      result.useNewPort.toLowerCase() === 'sim' ||
-      result.useNewPort.toLowerCase() === 's'
-    ) {
-      startServer(newPort);
-    } else {
-      console.log('Servidor não iniciado.');
-    }
-  });
-};
-
-// Iniciar o servidor na porta inicial
-startServer(initialPort);
+5. **Execute o seguinte comando para instalar as bibliotecas necessárias para produção:**
+```bash
+yarn add dotenv express fast-glob jsonwebtoken module-alias mysql2 sequelize swagger-jsdoc swagger-ui-express yaml yamljs zod nodemon ts-node
+```
+6. Crie os seguintes arquivos **jest-integration-config.ts**, **jest-unit-config.ts** e **jest.config.ts**:
+```typescript
+// jest-integration-config.ts
+const config = require('./jest.config.ts')
+config.testMatch = ['**/*.test.ts']
+module.exports = config
+```
+```typescript
+// jest-unit-config.ts
+const config = require('./jest.config.ts')
+config.testMatch = ['**/*.spec.ts']
+module.exports = config
+```
+```typescript
+// jest.config.ts
+module.exports = {
+  roots: ['<rootDir>/src', '<rootDir>/test'],
+  collectCoverageFrom: [
+    '<rootDir>/src/**/*.ts',
+    '!<rootDir>/src/**/index.ts',
+    '!<rootDir>/src/**/*protocols.ts'
+  ],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
+  testEnvironment: 'node',
+  coverageDirectory: 'coverage',
+  transform: {
+    '.+\\.ts$': 'ts-jest'
+  }
+}
 ```
 
 ### Passo 5: Criação de rotas para carregamento dinâmico
